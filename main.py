@@ -71,7 +71,53 @@ import urllib
 cloudfilename = input("Enter the file name you would like to open: ") # Must be file name on cloud
 url = storage.child(cloudfilename).get_url(None)
 readfile = urllib.request.urlopen(url).read()
-print(readfile) # THIS DOESN'T WORK, MAYBE OLD VERSION OF PYTHON OR SSL CERTIFICATE PROBLEM'''
+print(readfile) # THIS DOESN'T WORK, MAYBE OLD VERSION OF PYTHON OR SSL CERTIFICATE PROBLEM
 
 
 # DATABASE
+# Create: (add/create data into the database)
+data = {"age":35, "city":"Toronto", "employed":True, "name":"John Smith"}
+db.child("users").push(data) # Creates a child/subfolder called users and stores each key object inside
+# Without the .child(subfolder name), the key objects would be stored in the root folder. Can also ADD more .childs
+# However this creates a new id for the set of data, regardless of if its in a subfolder or not
+data = {"age":28, "city":"New York", "employed":True, "name":"Jane Smith"}
+db.child("users").child("myownid").set(data)
+# This allows for the subfolder with the data to be called myownid rather than a randomly generated id
+
+# Update: (update data in the database)
+db.child("users").child("myownid").update({"name":"Olivia Green"})
+# Follows pathway, finds the corresponding key, updates changes. If key doesn't exist, it will create a new one
+# What if you don't know the id or child name:
+people = db.child("users").get()   # Store each user in a variable
+for person in people.each():   # Go through each user
+  if person.val()["name"] == "Olivia Green":    # If the data under the key "name" is Olivia Green (.val = data)
+    db.child("users").child(person.key()).update({"name":"Jane Smith"})
+    # Follows pathway to update name (.key = id/child name)
+
+# Delete: (remove data in the database)
+db.child("users").child("manualperson").child("age").remove()  # Works when you know the child/id name
+# What if you don't know the id or child name:
+people = db.child("users").get()   # Store each user in a variable
+for person in people.each():   # Go through each user
+  if person.val()["name"] == "Pip":   # If user's name is Pip
+    db.child("users").child(person.key()).child("age").remove()   # Takes key (id), follows pathway, removes age data'''
+
+# Read: (open data in the database)
+# To optimize query performance, you should change the rules for the Realtime Database on Firebase. Add: "users": {
+# .indexOn":["age", "city", "name", "employed"]} Firebase creates an index for the specified fields, that filters/sort
+# these fields. Without indexing, Firebase would have to scan through all the data to satisfy the query, which is slow
+people = db.child("users").order_by_child("name").equal_to("Ravi").get()
+# Order each user by name and only get users with a name equal to Ravi
+for person in people.each():   # For each person who passed through above code
+  print (person.val()["age"])   # Prints only their ages
+
+people = db.child("users").order_by_child("age").start_at(30).get()
+# Order each user by age and only get users with age of at least 30
+for person in people.each():
+  print (person.val())
+# You can add .end_at(int) after the .start_at(int) to get an age range filter
+
+people = db.child("users").order_by_child("employed").equal_to(True).limit_to_first(1).get()
+for person in people.each():
+  print (person.val()["name"])
+# .limit_to_first(int) only retrieves the first number of results. .limit_to_last(int) does the opposite
